@@ -31,6 +31,11 @@ async function run() {
 
 
         // apis 
+
+
+        // get apis
+
+        // all offers, for homepage, section 5
         app.get('/offers', async (req, res) => {
             const cursor = offerCollection.find();
             const result = await cursor.toArray();
