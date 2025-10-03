@@ -26,6 +26,7 @@ async function run() {
         // collections 
         const offerCollection = client.db('adoptlyDB').collection('offers');
         const petCollection = client.db('adoptlyDB').collection('pets');
+        const requestCollection = client.db('adoptlyDB').collection('adoptRequest');
 
 
 
@@ -62,7 +63,7 @@ app.post('/pets',async(req,res) => {
         species:req.body.species ? req.body.species.toLowerCase() : "",
         weight:req.body.weight || "",
         vaccinated:req.body.vaccinated || false,
-        address:req.body.address, //district, division
+        address:req.body.address || { district: "", division: "" }, //district, division
         adoptedCount:req.body.adoptedCount || 0,
         quantity:req.body.quantity || 1,
         phoneNumber: req.body.phoneNumber || "",
@@ -190,7 +191,7 @@ app.delete("/pets/:id", async(req,res)=> {
 
     if(!ObjectId.isValid(id))
       return res.status(400).json({message:"Invalid ID"});
-    
+
     const result = await petCollection.deleteOne({_id: new ObjectId(id)});
 
     if(result.deletedCount === 0)
@@ -200,6 +201,116 @@ app.delete("/pets/:id", async(req,res)=> {
   } catch(err){
     console.log("Delete Error:", err);
     res.status(500).json({message: "Error deleting pet", error:err.message});
+  }
+});
+
+
+
+//Adopt Request
+
+//create request
+
+app.post('/request', async(req,res) => {
+  try{
+    const {userId, userEmail, petId, phoneNumber, address, quantity} = req.body;
+
+    if(!petId || !userId || !quantity)
+      return res.status(400).json({message:"Missing required field"});
+
+    const requestData = {
+      userId:new ObjectId(userId),
+      userEmail,
+      petId:new ObjectId(petId),
+      phoneNumber:phoneNumber || "",
+      address:address || { district: "", division: "" },
+      quantity:quantity || 1,
+      status:"pending",
+      requestDate:new Date()
+    };
+
+    const result = await requestCollection.insertOne(requestData);
+    res.status(201).json({_id:result.insertedId, ...requestData});
+
+  }catch(err){
+    console.log("Adoption Request Error:", err);
+    res.status(500).json({message:"Error creating adoption request", error:err.message});
+  }
+});
+
+
+
+//GET all request
+app.get("/request", async(req,res)=> {
+  try{
+    const request = await requestCollection.find().toArray();
+    res.json(request);
+
+  }catch(err){
+     console.log("Request Error:" , err);
+     res.status(500).json({message: "Error fetching requests", error:err.message});
+  }
+
+});
+
+
+
+//update request
+
+app.put('/request/:id', async(req, res) => {
+  try{
+    const {status} = req.body;
+
+    if(!status)
+      return res.status(400).json({message: "Missing status field"});
+
+    const request = await requestCollection.findOneAndUpdate(
+      {_id:new ObjectId(req.params.id)},
+      {$set:{status}},
+      {returnDocument: "after"}
+
+    );
+
+    if(!request)
+      return res.status(404).json({message:"Request not found"});
+
+    if(status === "accepted"){
+    const petId = request.petId;
+    const pet = await petCollection.findOne({_id:petId});
+    if(pet){
+      await petCollection.updateOne(
+        {_id:petId},
+        {
+          $inc:{quantity: -request.quantity},
+          $set:{isAdopted:true}
+        }
+      );
+    }
+
+  }
+
+  res.json(request);
+  } catch(err){
+    console.log("Update Request Error:", err);
+    res.status(500).json({message:"Error updating request", error:err.message});
+  }
+
+  
+  
+});
+
+
+//delete request
+
+app.delete('/request/:id', async (req,res) => {
+  try{
+    const result = await requestCollection.deleteOne({_id:new ObjectId(req.params.id)});
+    if(result.deletedCount === 0)
+      return res.status(404).json({message:"Request not found"});
+
+    res.json({message:"Request deleted successfully!"});
+  } catch(err){
+    console.log("Delete Request Error:", err);
+    res.status(500).json({message:"Error deleting request", error:err.message});
   }
 });
 
