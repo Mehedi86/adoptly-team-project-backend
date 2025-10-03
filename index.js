@@ -5,6 +5,7 @@ require('dotenv').config();
 const port = process.env.PORT || 5000;
 
 app.use(express.json());
+app.use(express.json());
 
 const uri = process.env.MONGO_URI;
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
