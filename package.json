@@ -1,7 +1,7 @@
 {
   "name": "pet-adoption-web-application-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "��#\u0000 \u0000a\u0000d\u0000o\u0000p\u0000t\u0000l\u0000y\u0000-\u0000t\u0000e\u0000a\u0000m\u0000-\u0000p\u0000r\u0000o\u0000j\u0000e\u0000c\u0000t\u0000-\u0000b\u0000a\u0000c\u0000k\u0000e\u0000n\u0000d\u0000\r\u0000 \u0000\r\u0000 \u0000-\u0000 \u0000c\u0000u\u0000r\u0000r\u0000e\u0000n\u0000t\u0000l\u0000y\u0000 \u0000u\u0000s\u0000e\u0000 \u0000n\u0000o\u0000d\u0000e\u0000 \u0000i\u0000n\u0000d\u0000e\u0000x\u0000.\u0000j\u0000s\u0000 \u0000t\u0000o\u0000 \u0000r\u0000u\u0000n\u0000 \u0000t\u0000h\u0000i\u0000s\u0000 \u0000s\u0000e\u0000r\u0000v\u0000e\u0000r\u0000 \u0000i\u0000n\u0000 \u0000l\u0000o\u0000c\u0000a\u0000l\u0000l\u0000y\u0000\r\u0000 \u0000\r\u0000 \u0000-\u0000 \u0000i\u0000f\u0000 \u0000n\u0000e\u0000e\u0000d\u0000e\u0000d\u0000 \u0000t\u0000h\u0000e\u0000n\u0000 \u0000w\u0000e\u0000 \u0000c\u0000a\u0000n\u0000 \u0000u\u0000s\u0000e\u0000 \u0000n\u0000o\u0000d\u0000e\u0000m\u0000o\u0000n\u0000\r\u0000 \u0000",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -15,5 +15,13 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "mongodb": "^6.20.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mehedi86/adoptly-team-project-backend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Mehedi86/adoptly-team-project-backend/issues"
+  },
+  "homepage": "https://github.com/Mehedi86/adoptly-team-project-backend#readme"
 }

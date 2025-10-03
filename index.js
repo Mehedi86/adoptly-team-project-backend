@@ -48,8 +48,8 @@ async function run() {
 app.post('/pets',async(req,res) => {
     try{
 
-      if(!req.body || !req.body.name){
-        return res.status(400).json({message:"Missing required field: name"});
+      if(!req.body || !req.body.name || !req.body.address || req.body.address.length !== 2 ){
+        return res.status(400).json({message:"Missing required field or address invalid (must include [district, division])"});
       }
 
       const petData = {
@@ -62,15 +62,23 @@ app.post('/pets',async(req,res) => {
         species:req.body.species ? req.body.species.toLowerCase() : "",
         weight:req.body.weight || "",
         vaccinated:req.body.vaccinated || false,
-        address:req.body.address || "",
+        address:req.body.address, //district, division
         adoptedCount:req.body.adoptedCount || 0,
+        quantity:req.body.quantity || 1,
+        phoneNumber: req.body.phoneNumber || "",
+        userEmail: req.body.userEmail || "",
+        status: req.status.status || "pending",
+        isAdopted: req.body.isAdopted || false,
         createdAt:new Date()
       };
+
+
+
       const result = await petCollection.insertOne(petData);
       res.status(201).json({_id:result.insertedId, ...petData});
     } catch(err){
       console.log('Insert Error:', err);
-      res.status(500).json({message:"Error creating pet", error:err});
+      res.status(500).json({message:"Error creating pet", error:err.message});
     }
 });
 
@@ -79,24 +87,28 @@ app.post('/pets',async(req,res) => {
 // get all pets with filter & pagination
 app.get('/pets', async(req, res)=> {
     try{
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 8;
-      const species = req.query.species ? req.query.species.toLowerCase() : null;
+      const { page = 1, limit = 8, species, district, division } = req.query;
       const skip = (page - 1) * limit;
 
       const filter = {};
       if(species){
-        filter.species = species;
+        filter.species = species.toLowerCase();
+       };
 
-      }
+       if(district)
+        filter['address.0'] = district;
+      if(division)
+        filter['address.1'] = division;
 
       const cursor = petCollection.find(filter)
       .sort({adoptedCount:-1})
-      .skip(skip)
-      .limit(limit);
+      .skip(parseInt(skip))
+      .limit(parseInt(limit));
+
       const result = await cursor.toArray();
       const total = await petCollection.countDocuments(filter);
-      res.json({total, page, limit, data:result});
+
+      res.json({total, page:parseInt(page), limit:parseInt(limit), data:result});
     } catch(err){
       console.log('Read Error:', err);
       res.status(500).json({message:"Error fetching pets", error:err.message});
@@ -113,10 +125,17 @@ app.get('/pets', async(req, res)=> {
 app.get('/pets/:id',async(req,res)=> {
     try{
       const id = req.params.id;
+
+      if(!ObjectId.isValid(id))
+        return res.status(400).json({message:"Invalid ID"});
+
       const pet = await petCollection.findOne({_id:new ObjectId(id)});
+
       if(!pet)
         return res.status(404).json({message:'Pet not found'});
+
       res.json(pet);
+
     } catch (err){
       console.log("Read single error:",err);
       res.status(500).json({message: "Error fetching pet", error:err.message});
@@ -139,6 +158,11 @@ app.put('/pets/:id', async(req,res)=>{
 
 
     const updateData = req.body;
+
+    if(updateData.address && updateData.address.length !== 2){
+      return res.status(400).json({message:"Address must be [district, division"});
+    }
+
     const result = await petCollection.findOneAndUpdate(
       {_id: new ObjectId(id)},
       {$set: updateData},
@@ -163,7 +187,12 @@ app.put('/pets/:id', async(req,res)=>{
 app.delete("/pets/:id", async(req,res)=> {
   try{
     const id = req.params.id;
+
+    if(!ObjectId.isValid(id))
+      return res.status(400).json({message:"Invalid ID"});
+    
     const result = await petCollection.deleteOne({_id: new ObjectId(id)});
+
     if(result.deletedCount === 0)
       return res.status(404).json({message: "Pet not found"});
 
