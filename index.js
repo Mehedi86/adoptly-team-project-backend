@@ -105,7 +105,7 @@ app.get('/pets', async(req, res)=> {
         filter['address.division'] = division;
 
       const cursor = petCollection.find(filter)
-      .sort({adoptedCount:-1})
+      .sort({adoptedCount:-1,  createdAt: -1})
       .skip(parseInt(skip))
       .limit(parseInt(limit));
 
@@ -260,7 +260,7 @@ app.post('/request', async(req,res) => {
 //GET all request
 app.get("/request", async(req,res)=> {
   try{
-    const request = await requestCollection.find().toArray();
+    const request = await requestCollection.find().sort({requestDate: -1}).toArray();
     res.status(200).json({message: "Data retrieved successfully", data:request});
 
   }catch(err){
@@ -269,6 +269,60 @@ app.get("/request", async(req,res)=> {
   }
 
 });
+
+
+
+//single request
+
+app.get("/request/:id", async(req, res) => {
+  try{
+    const id = req.params.id;
+
+    if(!ObjectId.isValid(id)){
+      return res.status(400).json({message:"Invalid request ID"});
+    }
+
+    const request = await requestCollection.findOne({
+      _id:new ObjectId(id)
+    });
+
+    if(!request){
+      return res.status(404).json({message:"Request not found"});
+    }
+    res.status(200).json(request);
+  }catch(err){
+    console.log("Error fetching request:", err);
+    res.status(500).json({message:"Server error"});
+  }
+});
+
+
+
+
+//Get all request by user email
+app.get("/request/user/:email", async(req,res) => {
+  try{
+    const email = req.params.email;
+
+    const request = await requestCollection
+    .find({userEmail:email})
+    .sort({requestDate: -1})
+    .toArray();
+
+    if(!request || request.length === 0){
+      return res.status(404).json({message:"No requests have been sent yet!"});
+    }
+    
+    res.status(200).json({ totalRequest: request.length, request});
+
+  } catch {
+    console.log("Error fetching requests:", err);
+    res.status(500).json({message:"Server error"});
+  }
+});
+
+
+
 
 
 
