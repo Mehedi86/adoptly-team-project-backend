@@ -49,7 +49,7 @@ async function run() {
 app.post('/pets',async(req,res) => {
     try{
 
-      if(!req.body || !req.body.name || !req.body.address || req.body.address.length !== 2 ){
+      if(!req.body || !req.body.name || !req.body.address || req.body.address.district || req.body.address.division ){
         return res.status(400).json({message:"Missing required field or address invalid (must include [district, division])"});
       }
 
@@ -63,7 +63,10 @@ app.post('/pets',async(req,res) => {
         species:req.body.species ? req.body.species.toLowerCase() : "",
         weight:req.body.weight || "",
         vaccinated:req.body.vaccinated || false,
-        address:req.body.address || { district: "", division: "" }, //district, division
+        address:{
+          district:req.body.address.district,
+          division:req.body.address.division,
+        }, //district, division
         adoptedCount:req.body.adoptedCount || 0,
         quantity:req.body.quantity || 1,
         phoneNumber: req.body.phoneNumber || "",
@@ -76,7 +79,7 @@ app.post('/pets',async(req,res) => {
 
 
       const result = await petCollection.insertOne(petData);
-      res.status(201).json({_id:result.insertedId, ...petData});
+      res.status(201).json({message: "Pet data create successfully", _id:result.insertedId, ...petData});
     } catch(err){
       console.log('Insert Error:', err);
       res.status(500).json({message:"Error creating pet", error:err.message});
@@ -97,9 +100,9 @@ app.get('/pets', async(req, res)=> {
        };
 
        if(district)
-        filter['address.0'] = district;
+        filter['address.district'] = district;
       if(division)
-        filter['address.1'] = division;
+        filter['address.division'] = division;
 
       const cursor = petCollection.find(filter)
       .sort({adoptedCount:-1})
@@ -109,7 +112,7 @@ app.get('/pets', async(req, res)=> {
       const result = await cursor.toArray();
       const total = await petCollection.countDocuments(filter);
 
-      res.json({total, page:parseInt(page), limit:parseInt(limit), data:result});
+      res.status(200).json({message: "Data retrieved successfully", total, page:parseInt(page), limit:parseInt(limit), data:result});
     } catch(err){
       console.log('Read Error:', err);
       res.status(500).json({message:"Error fetching pets", error:err.message});
@@ -135,7 +138,10 @@ app.get('/pets/:id',async(req,res)=> {
       if(!pet)
         return res.status(404).json({message:'Pet not found'});
 
-      res.json(pet);
+      res.status(200).json({
+  message: "Data retrieved successfully",
+  data: pet
+});
 
     } catch (err){
       console.log("Read single error:",err);
@@ -160,8 +166,8 @@ app.put('/pets/:id', async(req,res)=>{
 
     const updateData = req.body;
 
-    if(updateData.address && updateData.address.length !== 2){
-      return res.status(400).json({message:"Address must be [district, division"});
+    if(!updateData.address.district || !updateData.address.division){
+      return res.status(400).json({message:"Address must be {district, division}"});
     }
 
     const result = await petCollection.findOneAndUpdate(
@@ -173,7 +179,11 @@ app.put('/pets/:id', async(req,res)=>{
     if(!result ){
       return res.status(404).json({message:"Pet not found"});
     }
-    res.json(result);
+
+   res.status(200).json({
+  message: "Update successfully",
+  updated: result
+});
   }catch(err){
     console.log('Update error:', err);
     res.status(500).json({message:"Error updating pet", error:err.message});
@@ -197,7 +207,7 @@ app.delete("/pets/:id", async(req,res)=> {
     if(result.deletedCount === 0)
       return res.status(404).json({message: "Pet not found"});
 
-    res.json({message: "Pet deleted successfully"});
+    res.status(200).json({message: "Pet deleted successfully"});
   } catch(err){
     console.log("Delete Error:", err);
     res.status(500).json({message: "Error deleting pet", error:err.message});
@@ -217,19 +227,27 @@ app.post('/request', async(req,res) => {
     if(!petId || !userId || !quantity)
       return res.status(400).json({message:"Missing required field"});
 
+    if(!address || !address.district || !address.division){
+      return res.status(400).json({message: "Address must include {district, division}"});
+    }
+
+
     const requestData = {
       userId:new ObjectId(userId),
       userEmail,
       petId:new ObjectId(petId),
       phoneNumber:phoneNumber || "",
-      address:address || { district: "", division: "" },
+      address:{
+        district:address.district,
+        division:address.division,
+      },
       quantity:quantity || 1,
       status:"pending",
       requestDate:new Date()
     };
 
     const result = await requestCollection.insertOne(requestData);
-    res.status(201).json({_id:result.insertedId, ...requestData});
+    res.status(201).json({message: "Create request successfully", _id:result.insertedId, ...requestData});
 
   }catch(err){
     console.log("Adoption Request Error:", err);
@@ -243,7 +261,7 @@ app.post('/request', async(req,res) => {
 app.get("/request", async(req,res)=> {
   try{
     const request = await requestCollection.find().toArray();
-    res.json(request);
+    res.status(200).json({message: "Data retrieved successfully", data:request});
 
   }catch(err){
      console.log("Request Error:" , err);
@@ -258,14 +276,14 @@ app.get("/request", async(req,res)=> {
 
 app.put('/request/:id', async(req, res) => {
   try{
-    const {status} = req.body;
+    const updateData = req.body;
 
-    if(!status)
-      return res.status(400).json({message: "Missing status field"});
+    if(!updateData || Object.keys(updateData).length === 0)
+      return res.status(400).json({message: "No fields to update"});
 
     const request = await requestCollection.findOneAndUpdate(
       {_id:new ObjectId(req.params.id)},
-      {$set:{status}},
+      {$set:updateData},
       {returnDocument: "after"}
 
     );
@@ -273,22 +291,34 @@ app.put('/request/:id', async(req, res) => {
     if(!request)
       return res.status(404).json({message:"Request not found"});
 
-    if(status === "accepted"){
+    if(updateData.status === "accepted"){
     const petId = request.petId;
     const pet = await petCollection.findOne({_id:petId});
+
     if(pet){
+      if(pet.quantity > 0){
+        const newQuantity = Math.max( pet.quantity - request.quantity, 0);
       await petCollection.updateOne(
         {_id:petId},
         {
-          $inc:{quantity: -request.quantity},
-          $set:{isAdopted:true}
+          $inc:{adoptedCount: request.quantity},
+          $set:{
+            quantity:newQuantity,
+            isAdopted:newQuantity === 0
+          }
         }
       );
+      } else{
+        console.log("already adopted. No update needed");
+      }
     }
 
   }
 
-  res.json(request);
+  res.status(200).json({
+  message: "Update successfully",
+  updatedRequest: request
+});
   } catch(err){
     console.log("Update Request Error:", err);
     res.status(500).json({message:"Error updating request", error:err.message});
@@ -307,7 +337,7 @@ app.delete('/request/:id', async (req,res) => {
     if(result.deletedCount === 0)
       return res.status(404).json({message:"Request not found"});
 
-    res.json({message:"Request deleted successfully!"});
+    res.status(200).json({message:"Request deleted successfully!"});
   } catch(err){
     console.log("Delete Request Error:", err);
     res.status(500).json({message:"Error deleting request", error:err.message});
