@@ -30,6 +30,7 @@ async function run() {
     const feedbackCollection = client.db('adoptlyDB').collection('feedback');
     const userCollection = client.db('adoptlyDB').collection('users');
      const requestCollection = client.db('adoptlyDB').collection('adoptRequest');
+     const galleryCollection = client.db('adoptlyDB').collection('gallery');
 
 
 
@@ -399,6 +400,105 @@ app.delete('/request/:id', async (req,res) => {
 });
 
 
+
+
+//Gallery
+//create image
+app.post("/posts", async(req,res) => {
+  try{
+    const{userId, image} = req.body;
+
+    if(!userId || !image)
+      return res.status(400).json({message:"userId and image required"});
+  
+
+  const post = {
+    userId:new ObjectId(userId),
+    image,
+    likes:0,
+    likedBy:[],
+    createdAt:new Date()
+  };
+  const result = await galleryCollection.insertOne(post);
+  res.status(201).json({_id:result.insertedId, ...post});
+}catch(err){
+  console.log(err);
+  res.status(500).json({message: "Error creating post", error:err.message});
+}
+});
+
+
+//Get all post
+app.get("/posts", async(req,res) => {
+  try{
+    const post = await galleryCollection.find().sort({createdAt:-1}).toArray();
+
+    if(!post || post.length === 0){
+      return res.status(404).json({message:"No posts found"});
+    }
+    res.status(200).json({message:"All post retrieved successfully!",totalPosts:post.length, post});
+  }catch(err){
+    console.log("Error fetching posts:", err);
+    res.status(500).json({message:"Server error", error: err.message});
+  }
+});
+
+
+
+
+//like a post
+app.post('/posts/:postId/like', async(req,res) => {
+  try{
+    const {postId} = req.params;
+    const {userId} = req.body;
+
+    if(!userId)
+      return res.status(400).json({message:"userId required"});
+
+    const post = await galleryCollection.findOne({_id:new ObjectId(postId)});
+    if(!post)
+      return res.status(404).json({message:"Post not found"});
+
+    if(post.likedBy.includes(userId)){
+      return res.status(400).json({message:"User already liked this post!"});
+    }
+
+    await galleryCollection.updateOne(
+      {_id:new ObjectId(postId)},
+      {
+        $inc:{likes:1},
+        $push:{likedBy:userId}
+      }
+    );
+
+    res.status(200).json({message: "Post liked successfully"});
+  } catch(err){
+    console.log(err);
+    res.status(500).json({message:"Error liking post", error:err.message});
+  }
+});
+
+
+
+//Get liked post by a user
+app.get("/users/:userId/liked", async(req,res) => {
+  try{
+    const {userId} = req.params;
+    const post = await galleryCollection.find({likedBy:userId}).sort({createdAt: -1}).toArray();
+
+    const filter = post.map(item=>({
+    _id:item._id,
+    image:item.image,
+    likes:item.likes
+    }));
+
+    res.status(200).json({totalLiked:filter.length, data:filter });
+
+  }catch(err){
+    console.log(err);
+    res.status(500).json({message:"Error fetching liked posts", error:err.message});
+  }
+});
 
 
 
