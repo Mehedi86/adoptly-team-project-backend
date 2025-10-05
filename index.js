@@ -29,8 +29,10 @@ async function run() {
     const petCollection = client.db('adoptlyDB').collection('pets');
     const feedbackCollection = client.db('adoptlyDB').collection('feedback');
     const userCollection = client.db('adoptlyDB').collection('users');
-     const requestCollection = client.db('adoptlyDB').collection('adoptRequest');
-     const galleryCollection = client.db('adoptlyDB').collection('gallery');
+    const requestCollection = client.db('adoptlyDB').collection('adoptRequest');
+    const storyCollection = client.db('adoptlyDB').collection('success-story')
+    const storyRequestCollection = client.db('adoptlyDB').collection('story-request');
+    const galleryCollection = client.db('adoptlyDB').collection('gallery');
 
 
 
@@ -47,8 +49,8 @@ async function run() {
 
     // pet post create, read,update, delete
     //create pet
-app.post('/pets',async(req,res) => {
-    try{
+    app.post('/pets', async (req, res) => {
+      try {
 
       if(!req.body || !req.body.name || !req.body.address || req.body.address.district || req.body.address.division ){
         return res.status(400).json({message:"Missing required field or address invalid (must include [district, division])"});
@@ -401,23 +403,20 @@ app.put('/request/:id', async(req, res) => {
 });
 
 
+    //delete request
 
+    app.delete('/request/:id', async (req, res) => {
+      try {
+        const result = await requestCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+        if (result.deletedCount === 0)
+          return res.status(404).json({ message: "Request not found" });
 
-
-//delete request
-
-app.delete('/request/:id', async (req,res) => {
-  try{
-    const result = await requestCollection.deleteOne({_id:new ObjectId(req.params.id)});
-    if(result.deletedCount === 0)
-      return res.status(404).json({message:"Request not found"});
-
-    res.status(200).json({message:"Request deleted successfully!"});
-  } catch(err){
-    console.log("Delete Request Error:", err);
-    res.status(500).json({message:"Error deleting request", error:err.message});
-  }
-});
+        res.status(200).json({ message: "Request deleted successfully!" });
+      } catch (err) {
+        console.log("Delete Request Error:", err);
+        res.status(500).json({ message: "Error deleting request", error: err.message });
+      }
+    });
 
 
 
@@ -529,10 +528,15 @@ app.get("/users/:userId/liked", async(req,res) => {
     app.post('/user', async (req, res) => {
       try {
         const data = req.body;
+        const users = await userCollection.find().toArray();
+        const isExist = users.find(user => user.email === data.email);
+        if (isExist) {
+          return res.status(400).json({ message: "User already Exists" })
+        }
         const userData = {
           name: data.name,
           email: data.email,
-          // photo: data.photo,
+          photo: data.photo,
           role: data.role,  // user | admin
 
         }
@@ -649,6 +653,79 @@ app.get("/users/:userId/liked", async(req,res) => {
       } catch (error) {
         console.log("Cant find your desired data, something went wrong");
         res.status(500).json({ message: "dont find your data", error: error.message })
+      }
+    })
+
+
+
+    // success apis
+
+    // get all success story
+    app.get('/success-story', async (req, res) => {
+      try {
+        const cursor = storyCollection.find();
+        const result = await cursor.toArray();
+        res.status(200).json({ message: "Data retrive successfully", data: result })
+      } catch (error) {
+        console.log("Error", error);
+        res.status(500).json({ message: "Error to get data", error: error.message })
+      }
+    })
+    
+
+    // post success story
+    app.post('/success-story', async (req, res) => {
+      try {
+        const data = req.body;
+        const storyData = {
+          ownerId: data.ownerId,
+          ownerName: data.ownerName,
+          ownerEmail: data.ownerEmail,
+          petName: data.petName,
+          petBreed: data.petBreed,
+          petAge: data.petAge,
+          image: data.image,
+          story: data.story
+        }
+        const result = await storyCollection.insertOne(storyData);
+        res.status(201).json({ _id: result.insertedId, ...storyData })
+      } catch (error) {
+        console.log("Error", error);
+        res.status(500).json({ message: "Error to get data", error: error.message })
+      }
+    })
+
+
+    // request for post success story to admin
+
+    app.post('/request-story/:userEmail', async (req, res) => {
+      try {
+        const userEmail = req.params.userEmail;
+        const data = req.body;
+        if (!userEmail) {
+          return res.status(400).json({ message: "User email required" });
+        }
+        const user = await userCollection.findOne({ email: userEmail })
+        const storyInfo = {
+          userName: user.name,
+          userId: user._id,
+          userEmail: user.email,
+          petName: data.petName,
+          petBreed: data.petBreed,
+          petAge: data.petAge,
+          image: data.image,
+          story: data.story
+        }
+
+        const result = await storyRequestCollection.insertOne(storyInfo);
+        res.status(201).json({
+          insertedId: result.insertedId,
+          message: "Successfully inserted",
+          data: storyInfo
+        })
+      } catch (error) {
+        console.error("Error inserting story request:", error);
+        res.status(500).json({ message: "Internal Server Error", error: error.message });
       }
     })
 
