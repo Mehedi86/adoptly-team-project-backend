@@ -336,43 +336,60 @@ app.put('/request/:id', async(req, res) => {
     if(!updateData || Object.keys(updateData).length === 0)
       return res.status(400).json({message: "No fields to update"});
 
-    const request = await requestCollection.findOneAndUpdate(
-      {_id:new ObjectId(req.params.id)},
-      {$set:updateData},
-      {returnDocument: "after"}
+    const existRequest = await requestCollection.findOne({
+    _id:new ObjectId(req.params.id)
+    });
 
-    );
 
-    if(!request)
-      return res.status(404).json({message:"Request not found"});
+     if(!existRequest)
+      return res.status(404).json({message:"Request not found"})
+
+   
 
     if(updateData.status === "accepted"){
-    const petId = request.petId;
-    const pet = await petCollection.findOne({_id:petId});
+    const petId = existRequest.petId;
+    const pet = await petCollection.findOne({_id:new ObjectId(petId)});
 
-    if(pet){
+   if (!pet)
+        return res.status(404).json({ message: "Pet not found for this request" });
+
+  
+      if (existRequest.quantity > pet.quantity) {
+        return res.status(400).json({
+          message: `Not enough pets available. Requested: ${existRequest.quantity}, Available: ${pet.quantity}`,
+        });
+      }
+
       if(pet.quantity > 0){
-        const newQuantity = Math.max( pet.quantity - request.quantity, 0);
+      const newQuantity = Math.max(pet.quantity - existRequest.quantity, 0);
+
       await petCollection.updateOne(
-        {_id:petId},
+        { _id: new ObjectId(existRequest.petId) },
         {
-          $inc:{adoptedCount: request.quantity},
-          $set:{
-            quantity:newQuantity,
-            isAdopted:newQuantity === 0
-          }
+          $inc: { adoptedCount: existRequest.quantity },
+          $set: {
+            quantity: newQuantity,
+            isAdopted: newQuantity === 0,
+          },
         }
       );
-      } else{
+    }  else{
         console.log("already adopted. No update needed");
       }
+
     }
 
-  }
+    
+    const updatedRequest = await requestCollection.findOneAndUpdate(
+      { _id: new ObjectId(req.params.id) },
+      { $set: updateData },
+      { returnDocument: "after" }
+    );
+
 
   res.status(200).json({
   message: "Update successfully",
-  updatedRequest: request
+  data: updatedRequest
 });
   } catch(err){
     console.log("Update Request Error:", err);
@@ -382,6 +399,9 @@ app.put('/request/:id', async(req, res) => {
   
   
 });
+
+
+
 
 
 //delete request
