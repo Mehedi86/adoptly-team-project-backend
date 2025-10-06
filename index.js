@@ -588,6 +588,41 @@ app.get("/users/:userId/liked", async(req,res) => {
     })
 
 
+    // update user information
+    // update user
+app.put('/user/:email', async (req, res) => {
+  try {
+    const email = req.params.email;
+    const data = req.body;
+
+    // fields to update
+    const updatedData = {
+      $set: {
+        address: data.address,
+        isHavePets: data.isHavePets,
+        currentPetsQuantity: data.currentPetsQuantity,
+        preferredPetType: data.preferredPetType,
+        aboutUser: data.aboutUser,
+        createdAt: data.createdAt || new Date(),
+        updatedAt: new Date()
+      }
+    };
+
+    const result = await userCollection.updateOne({ email }, updatedData);
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "User updated successfully" });
+  } catch (error) {
+    console.error("Error while updating user:", error);
+    res.status(500).json({ message: "Error while updating user" });
+  }
+});
+
+
+
     // experience and feedback related api
 
     // post feedback
