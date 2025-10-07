@@ -58,6 +58,7 @@ async function run() {
     // all adoption
     // get all adopted pets
 
+
     app.get('/all-adoption', async (req, res) => {
       try {
         const adoptedPets = await petCollection.find({ isAdopted: true }).toArray();
@@ -111,8 +112,6 @@ async function run() {
           createdAt: new Date()
         };
 
-
-
         const result = await petCollection.insertOne(petData);
         res.status(201).json({ message: "Pet data create successfully", _id: result.insertedId, ...petData });
       } catch (err) {
@@ -158,6 +157,11 @@ async function run() {
 
 
 
+    
+
+
+
+
 
     // GET single pet
 
@@ -184,6 +188,13 @@ async function run() {
       }
 
     });
+
+  
+
+
+
+
+
 
 
 
@@ -215,10 +226,9 @@ app.get("/pets/user/:email", async(req,res) => {
 
 
 
-
     //update pet 
 
-    app.put('/pets/:id', async (req, res) => {
+   app.put('/pets/:id', async (req, res) => {
       try {
         const id = req.params.id;
 
@@ -257,6 +267,9 @@ app.get("/pets/user/:email", async(req,res) => {
 
 
 
+
+
+
     //Delete pet
 
     app.delete("/pets/:id", async (req, res) => {
@@ -277,6 +290,7 @@ app.get("/pets/user/:email", async(req,res) => {
         res.status(500).json({ message: "Error deleting pet", error: err.message });
       }
     });
+
 
 
 
