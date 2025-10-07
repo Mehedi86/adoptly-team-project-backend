@@ -622,12 +622,12 @@ async function run() {
 
     // update user information
     // update user
-    app.put('/user/:email', async (req, res) => {
+    
+    app.patch('/user/:email', async (req, res) => {
       try {
         const email = req.params.email;
         const data = req.body;
 
-        // fields to update
         const updatedData = {
           $set: {
             address: data.address,
@@ -635,7 +635,6 @@ async function run() {
             currentPetsQuantity: data.currentPetsQuantity,
             preferredPetType: data.preferredPetType,
             aboutUser: data.aboutUser,
-            createdAt: data.createdAt || new Date(),
             updatedAt: new Date()
           }
         };
@@ -652,6 +651,7 @@ async function run() {
         res.status(500).json({ message: "Error while updating user" });
       }
     });
+
 
 
     // delete user
