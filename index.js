@@ -58,6 +58,7 @@ async function run() {
     // all adoption
     // get all adopted pets
 
+
     app.get('/all-adoption', async (req, res) => {
       try {
         const adoptedPets = await petCollection.find({ isAdopted: true }).toArray();
@@ -111,8 +112,6 @@ async function run() {
           createdAt: new Date()
         };
 
-
-
         const result = await petCollection.insertOne(petData);
         res.status(201).json({ message: "Pet data create successfully", _id: result.insertedId, ...petData });
       } catch (err) {
@@ -158,6 +157,11 @@ async function run() {
 
 
 
+    
+
+
+
+
 
     // GET single pet
 
@@ -185,11 +189,46 @@ async function run() {
 
     });
 
+  
+
+
+
+
+
+
+
+
+//Get all pet by a user email
+app.get("/pets/user/:email", async(req,res) => {
+  try{
+    const{email} = req.params;
+
+    if(!email){
+      return res.status(400).json({message:"User email is required"});
+    }
+
+    const pets = await petCollection.find({userEmail:email}).sort({createdAt:-1}).toArray();
+
+    if(!pets || pets.length === 0){
+      return res.status(404).json({message:"No pets found for this user"});
+    }
+
+
+    res.status(200).json({totalPets:pets.length, pets});
+  }catch(err){
+    console.log("Error fetching user pets:", err);
+    res.status(500).json({message:"Error fetching user pet", error:err.message});
+  }
+});
+
+
+
+
 
 
     //update pet 
 
-    app.put('/pets/:id', async (req, res) => {
+   app.put('/pets/:id', async (req, res) => {
       try {
         const id = req.params.id;
 
@@ -228,6 +267,9 @@ async function run() {
 
 
 
+
+
+
     //Delete pet
 
     app.delete("/pets/:id", async (req, res) => {
@@ -248,6 +290,7 @@ async function run() {
         res.status(500).json({ message: "Error deleting pet", error: err.message });
       }
     });
+
 
 
 
