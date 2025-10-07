@@ -46,6 +46,29 @@ async function run() {
     })
 
 
+    // all adoption
+    // get all adopted pets
+    
+    app.get('/all-adoption', async (req, res) => {
+      try {
+        const adoptedPets = await petCollection.find({ isAdopted: true }).toArray();
+
+        if (adoptedPets.length === 0) {
+          return res.status(404).json({ message: "No adopted pets found" });
+        }
+
+        res.status(200).json({
+          message: "Adopted pets fetched successfully",
+          count: adoptedPets.length,
+          pets: adoptedPets
+        });
+      } catch (err) {
+        console.error('Fetch Error:', err);
+        res.status(500).json({ message: "Error fetching adopted pets", error: err.message });
+      }
+    });
+
+
 
     // pet post create, read,update, delete
     //create pet
@@ -623,7 +646,7 @@ async function run() {
 
 
     // delete user
-    
+
     app.delete('/user/:email', async (req, res) => {
       try {
         const email = req.params.email;
