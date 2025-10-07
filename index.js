@@ -674,7 +674,7 @@ async function run() {
 
 
     // make user admin
-    app.put('/user/admin/:email', async (req, res) => {
+    app.patch('/user/admin/:email', async (req, res) => {
       try {
         const email = req.params.email;
         const filter = { email };
@@ -683,8 +683,8 @@ async function run() {
         };
 
         const result = await userCollection.updateOne(filter, updateDoc);
-        if (result.modifiedCount === 0) {
-          return res.status(404).json({ message: "User not found or already admin" });
+        if (result.matchedCount === 0) {
+          return res.status(404).json({ message: "User not found" });
         }
 
         res.status(200).json({ message: "User role updated to admin successfully" });
