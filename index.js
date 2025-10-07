@@ -2,10 +2,19 @@ const express = require('express');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 require('dotenv').config();
+const cors = require('cors');
 const port = process.env.PORT || 5000;
 
+
+
+
+app.use(cors({
+    origin: "*", 
+    credentials: true
+}));
+
 app.use(express.json());
-app.use(express.json());
+
 
 const uri = process.env.MONGO_URI;
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -48,7 +57,7 @@ async function run() {
 
     // all adoption
     // get all adopted pets
-    
+
     app.get('/all-adoption', async (req, res) => {
       try {
         const adoptedPets = await petCollection.find({ isAdopted: true }).toArray();
