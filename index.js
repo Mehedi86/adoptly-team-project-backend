@@ -231,6 +231,7 @@ app.get("/pets/user/:email", async(req,res) => {
    app.put('/pets/:id', async (req, res) => {
       try {
         const id = req.params.id;
+        const {userEmail, ...updateData} = req.body;
 
 
         if (!ObjectId.isValid(id)) {
@@ -238,11 +239,56 @@ app.get("/pets/user/:email", async(req,res) => {
         }
 
 
-        const updateData = req.body;
+        
+    const pet = await petCollection.findOne({ _id: new ObjectId(id) });
+    if (!pet) {
+      return res.status(404).json({ message: "Pet not found" });
+    }
 
-        if (!updateData.address.district || !updateData.address.division) {
-          return res.status(400).json({ message: "Address must be {district, division}" });
-        }
+   
+    const user = await userCollection.findOne({ email: userEmail });
+    if (!user) {
+      // console.log(user);
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const role = user.role; 
+
+     //user try to update status
+     if (role !== "admin" && "status" in updateData) {
+      return res.status(403).json({ message: "You are not allowed to update status" });
+    }
+
+    //random user try to update pet
+    if (role !== "admin" && pet.userEmail !== userEmail) {
+      return res.status(403).json({ message: "You are not allowed to update this pet" });
+    }
+
+    
+    if (role === "admin") {
+
+      if (!("status" in updateData)) {
+        return res.status(400).json({ message: "Admin can only update status field" });
+      }
+
+      const result = await petCollection.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: { status: updateData.status } },
+        { returnDocument: "after" }
+      );
+      return res.status(200).json({ message: "Pet status updated by admin", updated: result });
+    }
+
+   
+    if ("status" in updateData) delete updateData.status;
+
+
+
+       if (updateData.address) {
+  if (!updateData.address.district || !updateData.address.division) {
+    return res.status(400).json({ message: "Address must be {district, division}" });
+  }
+}
 
         const result = await petCollection.findOneAndUpdate(
           { _id: new ObjectId(id) },
@@ -250,9 +296,7 @@ app.get("/pets/user/:email", async(req,res) => {
           { returnDocument: "after" }
         );
         // console.log(result);
-        if (!result) {
-          return res.status(404).json({ message: "Pet not found" });
-        }
+       
 
         res.status(200).json({
           message: "Update successfully",
@@ -404,11 +448,21 @@ app.get("/pets/user/:email", async(req,res) => {
 
 
 
+
+    
+
+
     //update request
 
     app.put('/request/:id', async (req, res) => {
       try {
-        const updateData = req.body;
+        const id = req.params.id;
+    const { userEmail, ...updateData } = req.body;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid Request ID format" });
+    }
+
 
         if (!updateData || Object.keys(updateData).length === 0)
           return res.status(400).json({ message: "No fields to update" });
@@ -422,40 +476,67 @@ app.get("/pets/user/:email", async(req,res) => {
           return res.status(404).json({ message: "Request not found" })
 
 
+        // Check user role
+    const user = await userCollection.findOne({ email: userEmail });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const role = user.role;
 
-        if (updateData.status === "accepted") {
-          const petId = existRequest.petId;
-          const pet = await petCollection.findOne({ _id: new ObjectId(petId) });
 
-          if (!pet)
-            return res.status(404).json({ message: "Pet not found for this request" });
+    //user try to update status
+     if (role !== "admin" && "status" in updateData) {
+      return res.status(403).json({ message: "You are not allowed to update status" });
+    }
 
 
-          if (existRequest.quantity > pet.quantity) {
-            return res.status(400).json({
-              message: `Not enough pets available. Requested: ${existRequest.quantity}, Available: ${pet.quantity}`,
-            });
-          }
+    // Permission check
+    if (role !== "admin" && existRequest.userEmail !== userEmail) {
+      return res.status(403).json({ message: "You are not allowed to update this request" });
+    }
 
-          if (pet.quantity > 0) {
-            const newQuantity = Math.max(pet.quantity - existRequest.quantity, 0);
 
-            await petCollection.updateOne(
-              { _id: new ObjectId(existRequest.petId) },
-              {
-                $inc: { adoptedCount: existRequest.quantity },
-                $set: {
-                  quantity: newQuantity,
-                  isAdopted: newQuantity === 0,
-                },
-              }
-            );
-          } else {
-            console.log("already adopted. No update needed");
-          }
+    if (role === "admin") {
+      if (!("status" in updateData)) {
+        return res.status(400).json({ message: "Admin can only update status field" });
+      }
 
+      // If status is accepted
+      if (updateData.status === "accepted") {
+        const pet = await petCollection.findOne({ _id: new ObjectId(existRequest.petId) });
+        if (!pet) return res.status(404).json({ message: "Pet not found for this request" });
+
+        if (existRequest.quantity > pet.quantity) {
+          return res.status(400).json({
+            message: `Not enough pets available. Requested: ${existRequest.quantity}, Available: ${pet.quantity}`,
+          });
         }
 
+        if (pet.quantity > 0) {
+          const newQuantity = Math.max(pet.quantity - existRequest.quantity, 0);
+          await petCollection.updateOne(
+            { _id: new ObjectId(existRequest.petId) },
+            {
+              $inc: { adoptedCount: existRequest.quantity },
+              $set: { quantity: newQuantity, isAdopted: newQuantity === 0 },
+            }
+          );
+        } else {
+            console.log("already adopted. No update needed");
+          }
+      }
+
+
+      const updatedRequest = await requestCollection.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: { status: updateData.status } },
+        { returnDocument: "after" }
+      );
+      return res.status(200).json({ message: "Request status updated by admin", data: updatedRequest });
+    }
+
+
+    if ("status" in updateData) delete updateData.status;
 
         const updatedRequest = await requestCollection.findOneAndUpdate(
           { _id: new ObjectId(req.params.id) },
@@ -476,6 +557,13 @@ app.get("/pets/user/:email", async(req,res) => {
 
 
     });
+
+
+
+
+
+
+
 
 
     //delete request
@@ -736,6 +824,11 @@ app.get("/pets/user/:email", async(req,res) => {
         res.status(500).json({ message: "Internal Server Error" });
       }
     });
+
+
+
+
+
 
     // experience and feedback related api
 
