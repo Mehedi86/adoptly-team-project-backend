@@ -85,7 +85,7 @@ async function run() {
     app.post('/pets', async (req, res) => {
       try {
 
-        if (!req.body || !req.body.name || !req.body.address || req.body.address.district || req.body.address.division) {
+        if (!req.body || !req.body.name || !req.body.address || !req.body.address.district || !req.body.address.division  || !req.body.userEmail   || !req.body.phoneNumber) {
           return res.status(400).json({ message: "Missing required field or address invalid (must include [district, division])" });
         }
 
@@ -107,7 +107,7 @@ async function run() {
           quantity: req.body.quantity || 1,
           phoneNumber: req.body.phoneNumber || "",
           userEmail: req.body.userEmail || "",
-          status: req.status.status || "pending",
+          status: req.body.status || "pending",
           isAdopted: req.body.isAdopted || false,
           createdAt: new Date()
         };
