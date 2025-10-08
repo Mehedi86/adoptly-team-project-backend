@@ -58,6 +58,7 @@ async function run() {
     // all adoption
     // get all adopted pets
 
+
     app.get('/all-adoption', async (req, res) => {
       try {
         const adoptedPets = await petCollection.find({ isAdopted: true }).toArray();
@@ -84,7 +85,7 @@ async function run() {
     app.post('/pets', async (req, res) => {
       try {
 
-        if (!req.body || !req.body.name || !req.body.address || !req.body.address.district || !req.body.address.division || !req.body.userEmail || !req.body.phoneNumber) {
+        if (!req.body || !req.body.name || !req.body.address || !req.body.address.district || !req.body.address.division  || !req.body.userEmail   || !req.body.phoneNumber) {
           return res.status(400).json({ message: "Missing required field or address invalid (must include [district, division])" });
         }
 
@@ -110,8 +111,6 @@ async function run() {
           isAdopted: req.body.isAdopted || false,
           createdAt: new Date()
         };
-
-
 
         const result = await petCollection.insertOne(petData);
         res.status(201).json({ message: "Pet data create successfully", _id: result.insertedId, ...petData });
@@ -158,6 +157,11 @@ async function run() {
 
 
 
+    
+
+
+
+
 
     // GET single pet
 
@@ -184,6 +188,13 @@ async function run() {
       }
 
     });
+
+  
+
+
+
+
+
 
 
 
@@ -215,10 +226,9 @@ app.get("/pets/user/:email", async(req,res) => {
 
 
 
-
     //update pet 
 
-    app.put('/pets/:id', async (req, res) => {
+   app.put('/pets/:id', async (req, res) => {
       try {
         const id = req.params.id;
 
@@ -257,6 +267,9 @@ app.get("/pets/user/:email", async(req,res) => {
 
 
 
+
+
+
     //Delete pet
 
     app.delete("/pets/:id", async (req, res) => {
@@ -277,6 +290,7 @@ app.get("/pets/user/:email", async(req,res) => {
         res.status(500).json({ message: "Error deleting pet", error: err.message });
       }
     });
+
 
 
 
