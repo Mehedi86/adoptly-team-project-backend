@@ -694,7 +694,7 @@ app.get("/pets/user/:email", async(req,res) => {
         const users = await userCollection.find().toArray();
         const isExist = users.find(user => user.email === data.email);
         if (isExist) {
-          return res.status(400).json({ message: "User already Exists" })
+          return res.json({ message: "User already Exists" });
         }
         const userData = {
           name: data.name,
